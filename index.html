@@ -29,7 +29,7 @@
       </div>
       <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
         <p class="text-sm text-gray-500 uppercase font-semibold">Valor Total Almacén</p>
-        <p id="statValor" class="text-2xl font-bold text-gray-800">$0.00</p>
+        <p id="statValor" class="text-2xl font-bold text-gray-800">0,00 €</p>
       </div>
     </div>
 
@@ -42,7 +42,7 @@
         <input type="text" id="ubicacion" placeholder="Ubicación" class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
         <input type="number" id="stock_actual" placeholder="Stock Actual" value="0" min="0" class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
         <input type="number" id="stock_minimo" placeholder="Stock Mínimo" value="5" min="0" class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-        <input type="number" step="0.01" id="precio_costo" placeholder="Precio ($)" value="0.00" min="0" class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        <input type="number" step="0.01" id="precio_costo" placeholder="Precio (€)" value="0.00" min="0" class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
         
         <div class="lg:col-span-6 flex justify-end">
           <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow transition text-sm">
@@ -118,7 +118,7 @@
           <input type="number" id="edit_stock_minimo" min="0" required class="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">Precio Costo ($)</label>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Precio Costo (€)</label>
           <input type="number" step="0.01" id="edit_precio_costo" min="0" required class="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
         </div>
 
@@ -140,6 +140,11 @@
 
     let listaProductos = [];
     let filtroActual = 'TODOS';
+
+    // Formatear números a moneda Euro (€)
+    function formatearEuro(valor) {
+      return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(valor);
+    }
 
     // Obtener productos
     async function cargarProductos() {
@@ -189,7 +194,7 @@
         const stockActual = Number(prod.stock_actual || 0);
         const stockMinimo = Number(prod.stock_minimo || 0);
         const precioCosto = Number(prod.precio_costo || 0);
-        const valorTotal = (stockActual * precioCosto).toFixed(2);
+        const valorTotal = stockActual * precioCosto;
         
         const alertaStock = stockActual <= stockMinimo ? 'bg-red-50 text-red-700 font-medium' : '';
 
@@ -201,8 +206,8 @@
           <td class="p-3">${prod.ubicacion || 'Sin Asignar'}</td>
           <td class="p-3 font-bold">${stockActual}</td>
           <td class="p-3 text-gray-500">${stockMinimo}</td>
-          <td class="p-3">$${precioCosto.toFixed(2)}</td>
-          <td class="p-3 font-semibold">$${valorTotal}</td>
+          <td class="p-3">${formatearEuro(precioCosto)}</td>
+          <td class="p-3 font-semibold">${formatearEuro(valorTotal)}</td>
           <td class="p-3 text-center space-x-1">
             <button onclick="registrarMovimiento(${prod.id}, 'ENTRADA')" class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs transition" title="Añadir entrada">
               + Entrada
@@ -239,7 +244,7 @@
 
       document.getElementById('statTotal').innerText = total;
       document.getElementById('statBajo').innerText = bajo;
-      document.getElementById('statValor').innerText = `$${valorTotal.toFixed(2)}`;
+      document.getElementById('statValor').innerText = formatearEuro(valorTotal);
     }
 
     // Buscador y filtros
@@ -377,7 +382,7 @@
       }
 
       let csvContent = "data:text/csv;charset=utf-8,";
-      csvContent += "Codigo,Nombre,Ubicacion,Stock Actual,Stock Minimo,Precio Costo,Valor Total\n";
+      csvContent += "Codigo,Nombre,Ubicacion,Stock Actual,Stock Minimo,Precio Costo (€),Valor Total (€)\n";
 
       listaProductos.forEach(p => {
         const stock = Number(p.stock_actual || 0);
@@ -400,8 +405,3 @@
   </script>
 </body>
 </html>
-Para desplegar la actualización:
-
-Confirmar despliegue en GitHub/Render
-
-Añadir historial de movimientos
