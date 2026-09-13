@@ -3,114 +3,248 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Control de Inventario</title>
+  <title>Control de Inventario Avanzado</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 p-6">
-  <div class="max-w-6xl mx-auto">
-    <h1 class="text-3xl font-bold mb-6 text-gray-800">Sistema de Control de Inventario</h1>
+<body class="bg-gray-100 p-4 md:p-8">
+  <div class="max-w-7xl mx-auto">
+    
+    <!-- Encabezado -->
+    <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+      <h1 class="text-3xl font-bold text-gray-800">Panel de Control de Inventario</h1>
+      <button onclick="exportarCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded shadow transition flex items-center gap-2">
+        📊 Exportar a Excel (CSV)
+      </button>
+    </div>
+
+    <!-- Tarjetas de Resumen -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
+        <p class="text-sm text-gray-500 uppercase font-semibold">Total Productos</p>
+        <p id="statTotal" class="text-2xl font-bold text-gray-800">0</p>
+      </div>
+      <div class="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
+        <p class="text-sm text-gray-500 uppercase font-semibold">Stock Bajo / Crítico</p>
+        <p id="statBajo" class="text-2xl font-bold text-red-600">0</p>
+      </div>
+      <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
+        <p class="text-sm text-gray-500 uppercase font-semibold">Valor Total Almacén</p>
+        <p id="statValor" class="text-2xl font-bold text-gray-800">$0.00</p>
+      </div>
+    </div>
 
     <!-- Formulario para agregar productos -->
-    <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-      <h2 class="text-xl font-semibold mb-4 text-gray-700">Registrar Nuevo Producto</h2>
-      <form id="formProducto" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <input type="text" id="codigo" placeholder="Código *" required class="border p-2 rounded w-full">
-        <input type="text" id="nombre" placeholder="Nombre del producto *" required class="border p-2 rounded w-full">
-        <input type="text" id="ubicacion" placeholder="Ubicación" class="border p-2 rounded w-full">
-        <input type="number" id="stock_actual" placeholder="Stock Actual" value="0" min="0" class="border p-2 rounded w-full">
-        <input type="number" id="stock_minimo" placeholder="Stock Mínimo" value="5" min="0" class="border p-2 rounded w-full">
-        <input type="number" step="0.01" id="precio_costo" placeholder="Precio Costo ($)" value="0.00" min="0" class="border p-2 rounded w-full">
+    <div class="bg-white p-6 rounded-lg shadow mb-6">
+      <h2 class="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">Registrar Nuevo Producto</h2>
+      <form id="formProducto" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <input type="text" id="codigo" placeholder="Código *" required class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        <input type="text" id="nombre" placeholder="Nombre *" required class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        <input type="text" id="ubicacion" placeholder="Ubicación" class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        <input type="number" id="stock_actual" placeholder="Stock Actual" value="0" min="0" class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        <input type="number" id="stock_minimo" placeholder="Stock Mínimo" value="5" min="0" class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        <input type="number" step="0.01" id="precio_costo" placeholder="Precio ($)" value="0.00" min="0" class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
         
-        <div class="md:col-span-3">
-          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow transition">
-            Guardar Producto
+        <div class="lg:col-span-6 flex justify-end">
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow transition text-sm">
+            + Guardar Producto
           </button>
         </div>
       </form>
     </div>
 
-    <!-- Tabla de inventario -->
-    <div class="bg-white rounded-lg shadow-md overflow-x-auto">
+    <!-- Barra de Búsqueda y Filtros -->
+    <div class="bg-white p-4 rounded-lg shadow mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
+      <div class="w-full md:w-1/2">
+        <input type="text" id="inputBuscar" oninput="filtrarProductos()" placeholder="🔍 Buscar por código, nombre o ubicación..." class="w-full border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+      </div>
+      <div class="flex gap-2 w-full md:w-auto">
+        <button onclick="filtrarEstado('TODOS')" class="border px-3 py-1 rounded text-xs font-semibold bg-gray-200 hover:bg-gray-300">Todos</button>
+        <button onclick="filtrarEstado('BAJO')" class="border px-3 py-1 rounded text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200">Stock Bajo</button>
+      </div>
+    </div>
+
+    <!-- Tabla de Inventario -->
+    <div class="bg-white rounded-lg shadow overflow-x-auto">
       <table class="w-full text-left border-collapse">
         <thead>
-          <tr class="bg-gray-200 text-gray-700 uppercase text-sm">
+          <tr class="bg-gray-100 text-gray-700 uppercase text-xs border-b">
             <th class="p-3">Código</th>
             <th class="p-3">Nombre</th>
             <th class="p-3">Ubicación</th>
             <th class="p-3">Stock</th>
             <th class="p-3">Mínimo</th>
             <th class="p-3">Precio</th>
+            <th class="p-3">Valor Total</th>
             <th class="p-3 text-center">Acciones</th>
           </tr>
         </thead>
-        <tbody id="tablaInventario" class="divide-y divide-gray-200">
+        <tbody id="tablaInventario" class="divide-y divide-gray-200 text-sm">
           <tr>
-            <td colspan="7" class="p-4 text-center text-gray-500">Cargando inventario...</td>
+            <td colspan="8" class="p-4 text-center text-gray-500">Cargando inventario...</td>
           </tr>
         </tbody>
       </table>
     </div>
+
+  </div>
+
+  <!-- Modal / Ventana Flotante para Editar Producto -->
+  <div id="modalEditar" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-lg p-6 max-w-lg w-full shadow-2xl">
+      <div class="flex justify-between items-center mb-4 border-b pb-2">
+        <h3 class="text-lg font-bold text-gray-800">Editar / Reajustar Producto</h3>
+        <button onclick="cerrarModal()" class="text-gray-500 hover:text-gray-700 font-bold text-xl">&times;</button>
+      </div>
+      <form id="formEditar" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <input type="hidden" id="edit_id">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Código</label>
+          <input type="text" id="edit_codigo" required class="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Nombre</label>
+          <input type="text" id="edit_nombre" required class="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Ubicación</label>
+          <input type="text" id="edit_ubicacion" class="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Stock Actual (Reajuste)</label>
+          <input type="number" id="edit_stock_actual" min="0" required class="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Stock Mínimo</label>
+          <input type="number" id="edit_stock_minimo" min="0" required class="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Precio Costo ($)</label>
+          <input type="number" step="0.01" id="edit_precio_costo" min="0" required class="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="sm:col-span-2 flex justify-end gap-2 mt-4 border-t pt-3">
+          <button type="button" onclick="cerrarModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold px-4 py-2 rounded text-sm">
+            Cancelar
+          </button>
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded text-sm">
+            Guardar Cambios
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <script>
-    // SUSTITUYE ESTA URL POR LA TUYA DE RENDER (Manteniendo el /api/inventario al final)
-    const API_URL = 'https://almacen-inventario-9bd3.onrender.com/api/inventario';
+    // SUSTITUYE ESTA URL POR LA TUYA DE RENDER
+    const API_URL = 'https://tu-proyecto.onrender.com/api/inventario';
 
-    // Obtener y renderizar todos los productos
+    let listaProductos = [];
+    let filtroActual = 'TODOS';
+
+    // Cargar productos desde el backend
     async function cargarProductos() {
       try {
         const respuesta = await fetch(API_URL);
-        
-        if (!respuesta.ok) {
-          throw new Error('Error al conectar con la API');
-        }
+        if (!respuesta.ok) throw new Error('Error al conectar con la API');
 
-        const productos = await respuesta.json();
-        const tbody = document.getElementById('tablaInventario');
-        tbody.innerHTML = '';
-
-        if (productos.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-gray-500">No hay productos en el inventario.</td></tr>`;
-          return;
-        }
-
-        productos.forEach(prod => {
-          // Protección contra valores nulos/undefined que causaban el error de toFixed
-          const stockActual = Number(prod.stock_actual || 0);
-          const stockMinimo = Number(prod.stock_minimo || 0);
-          const precioCosto = Number(prod.precio_costo || 0).toFixed(2);
-          const alertaStock = stockActual <= stockMinimo ? 'bg-red-100 text-red-700 font-bold' : '';
-
-          const tr = document.createElement('tr');
-          tr.className = `hover:bg-gray-50 ${alertaStock}`;
-          tr.innerHTML = `
-            <td class="p-3 font-mono text-sm">${prod.codigo || '-'}</td>
-            <td class="p-3 font-semibold">${prod.nombre || '-'}</td>
-            <td class="p-3">${prod.ubicacion || 'Sin Asignar'}</td>
-            <td class="p-3">${stockActual}</td>
-            <td class="p-3">${stockMinimo}</td>
-            <td class="p-3">$${precioCosto}</td>
-            <td class="p-3 text-center space-x-2">
-              <button onclick="registrarMovimiento(${prod.id}, 'ENTRADA')" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm transition">
-                + Entrada
-              </button>
-              <button onclick="registrarMovimiento(${prod.id}, 'SALIDA')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition">
-                - Salida
-              </button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
+        listaProductos = await respuesta.json();
+        actualizarEstadisticas();
+        renderizarTabla();
       } catch (error) {
         console.error('Error:', error);
         document.getElementById('tablaInventario').innerHTML = `
           <tr>
-            <td colspan="7" class="p-4 text-center text-red-600 font-semibold">
-              Error al conectar con el servidor. Verifica que el servidor de Render esté encendido.
+            <td colspan="8" class="p-4 text-center text-red-600 font-semibold">
+              Error al conectar con el servidor de Render.
             </td>
           </tr>`;
       }
     }
+
+    // Renderizar la tabla con filtros aplicados
+    function renderizarTabla() {
+      const tbody = document.getElementById('tablaInventario');
+      tbody.innerHTML = '';
+
+      const textoBusqueda = document.getElementById('inputBuscar').value.toLowerCase();
+
+      const productosFiltrados = listaProductos.filter(prod => {
+        const coincideTexto = (prod.codigo || '').toLowerCase().includes(textoBusqueda) ||
+                              (prod.nombre || '').toLowerCase().includes(textoBusqueda) ||
+                              (prod.ubicacion || '').toLowerCase().includes(textoBusqueda);
+
+        const stock = Number(prod.stock_actual || 0);
+        const min = Number(prod.stock_minimo || 0);
+
+        if (filtroActual === 'BAJO') return coincideTexto && stock <= min;
+        return coincideTexto;
+      });
+
+      if (productosFiltrados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-500">No se encontraron productos.</td></tr>`;
+        return;
+      }
+
+      productosFiltrados.forEach(prod => {
+        const stockActual = Number(prod.stock_actual || 0);
+        const stockMinimo = Number(prod.stock_minimo || 0);
+        const precioCosto = Number(prod.precio_costo || 0);
+        const valorTotal = (stockActual * precioCosto).toFixed(2);
+        
+        const alertaStock = stockActual <= stockMinimo ? 'bg-red-50 text-red-700 font-medium' : '';
+
+        const tr = document.createElement('tr');
+        tr.className = `hover:bg-gray-50 ${alertaStock}`;
+        tr.innerHTML = `
+          <td class="p-3 font-mono text-xs">${prod.codigo || '-'}</td>
+          <td class="p-3 font-semibold">${prod.nombre || '-'}</td>
+          <td class="p-3">${prod.ubicacion || 'Sin Asignar'}</td>
+          <td class="p-3 font-bold">${stockActual}</td>
+          <td class="p-3 text-gray-500">${stockMinimo}</td>
+          <td class="p-3">$${precioCosto.toFixed(2)}</td>
+          <td class="p-3 font-semibold">$${valorTotal}</td>
+          <td class="p-3 text-center space-x-1">
+            <button onclick="registrarMovimiento(${prod.id}, 'ENTRADA')" class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs transition" title="Añadir entrada">
+              + Entrada
+            </button>
+            <button onclick="registrarMovimiento(${prod.id}, 'SALIDA')" class="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-xs transition" title="Registrar salida">
+              - Salida
+            </button>
+            <button onclick="abrirModalEditar(${prod.id})" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs transition" title="Editar datos o reajustar">
+              ✏️ Editar
+            </button>
+            <button onclick="eliminarProducto(${prod.id})" class="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs transition" title="Eliminar producto">
+              🗑️
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Actualizar tarjetas estadísticas
+    function actualizarEstadisticas() {
+      const total = listaProductos.length;
+      let bajo = 0;
+      let valorTotal = 0;
+
+      listaProductos.forEach(p => {
+        const stock = Number(p.stock_actual || 0);
+        const min = Number(p.stock_minimo || 0);
+        const precio = Number(p.precio_costo || 0);
+
+        if (stock <= min) bajo++;
+        valorTotal += stock * precio;
+      });
+
+      document.getElementById('statTotal').innerText = total;
+      document.getElementById('statBajo').innerText = bajo;
+      document.getElementById('statValor').innerText = `$${valorTotal.toFixed(2)}`;
+    }
+
+    // Buscador y filtros
+    function filtrarProductos() { renderizarTabla(); }
+    function filtrarEstado(estado) { filtroActual = estado; renderizarTabla(); }
 
     // Guardar nuevo producto
     document.getElementById('formProducto').addEventListener('submit', async (e) => {
@@ -139,19 +273,70 @@
           alert('Error al guardar el producto.');
         }
       } catch (error) {
-        console.error('Error al enviar datos:', error);
-        alert('No se pudo guardar el producto. Comprueba la conexión.');
+        alert('No se pudo conectar con el servidor.');
       }
     });
 
-    // Registrar Entrada (+) o Salida (-)
+    // Abrir Modal con datos del producto
+    function abrirModalEditar(id) {
+      const prod = listaProductos.find(p => p.id === id);
+      if (!prod) return;
+
+      document.getElementById('edit_id').value = prod.id;
+      document.getElementById('edit_codigo').value = prod.codigo || '';
+      document.getElementById('edit_nombre').value = prod.nombre || '';
+      document.getElementById('edit_ubicacion').value = prod.ubicacion || '';
+      document.getElementById('edit_stock_actual').value = prod.stock_actual || 0;
+      document.getElementById('edit_stock_minimo').value = prod.stock_minimo || 0;
+      document.getElementById('edit_precio_costo').value = prod.precio_costo || 0;
+
+      document.getElementById('modalEditar').classList.remove('hidden');
+    }
+
+    function cerrarModal() {
+      document.getElementById('modalEditar').classList.add('hidden');
+    }
+
+    // Enviar cambios editados (PUT)
+    document.getElementById('formEditar').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('edit_id').value;
+
+      const productoEditado = {
+        codigo: document.getElementById('edit_codigo').value,
+        nombre: document.getElementById('edit_nombre').value,
+        ubicacion: document.getElementById('edit_ubicacion').value || 'Sin Asignar',
+        stock_actual: Number(document.getElementById('edit_stock_actual').value),
+        stock_minimo: Number(document.getElementById('edit_stock_minimo').value),
+        precio_costo: Number(document.getElementById('edit_precio_costo').value)
+      };
+
+      try {
+        const respuesta = await fetch(`${API_URL}/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(productoEditado)
+        });
+
+        if (respuesta.ok) {
+          cerrarModal();
+          cargarProductos();
+        } else {
+          alert('Error al actualizar el producto.');
+        }
+      } catch (error) {
+        alert('No se pudo guardar la edición.');
+      }
+    });
+
+    // Registrar Entrada / Salida
     async function registrarMovimiento(id, tipo) {
       const cantidadStr = prompt(`Cantidad para ${tipo}:`, '1');
       if (!cantidadStr) return;
 
       const cantidad = Number(cantidadStr);
       if (isNaN(cantidad) || cantidad <= 0) {
-        alert('Por favor, ingresa un número válido mayor a 0.');
+        alert('Ingresa una cantidad válida.');
         return;
       }
 
@@ -162,18 +347,55 @@
           body: JSON.stringify({ tipo, cantidad })
         });
 
-        if (respuesta.ok) {
-          cargarProductos();
-        } else {
-          alert('Error al actualizar el stock.');
-        }
+        if (respuesta.ok) cargarProductos();
       } catch (error) {
-        console.error('Error en el movimiento:', error);
-        alert('No se pudo actualizar el stock.');
+        alert('Error al registrar el movimiento.');
       }
     }
 
-    // Cargar los productos al abrir la página
+    // Eliminar producto
+    async function eliminarProducto(id) {
+      if (!confirm('¿Estás seguro de que deseas eliminar este producto?')) return;
+
+      try {
+        const respuesta = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+        if (respuesta.ok) {
+          cargarProductos();
+        } else {
+          alert('No se pudo eliminar el producto.');
+        }
+      } catch (error) {
+        alert('Error al eliminar el producto.');
+      }
+    }
+
+    // Exportar a CSV
+    function exportarCSV() {
+      if (listaProductos.length === 0) {
+        alert('No hay datos para exportar.');
+        return;
+      }
+
+      let csvContent = "data:text/csv;charset=utf-8,";
+      csvContent += "Codigo,Nombre,Ubicacion,Stock Actual,Stock Minimo,Precio Costo,Valor Total\n";
+
+      listaProductos.forEach(p => {
+        const stock = Number(p.stock_actual || 0);
+        const precio = Number(p.precio_costo || 0);
+        const total = (stock * precio).toFixed(2);
+        csvContent += `"${p.codigo}","${p.nombre}","${p.ubicacion}",${stock},${p.stock_minimo},${precio},${total}\n`;
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `inventario_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Carga inicial
     cargarProductos();
   </script>
 </body>
