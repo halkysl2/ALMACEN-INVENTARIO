@@ -7,10 +7,9 @@ const app = express();
 const adapter = new FileSync('inventario.json');
 const db = low(adapter);
 
-// Configuración inicial de la base de datos JSON
+// Configurar DB
 db.defaults({ inventario: [] }).write();
 
-// Middlewares
 app.use(cors());
 app.use(express.json());
 
@@ -22,12 +21,14 @@ app.get('/api/inventario', (req, res) => {
 
 // 2. POST: Crear un nuevo producto
 app.post('/api/inventario', (req, res) => {
-  const { codigo, nombre, ubicacion, stock_actual, stock_minimo, precio_costo } = req.body;
+  const { codigo, nombre, familia, proveedor, ubicacion, stock_actual, stock_minimo, precio_costo } = req.body;
   
   const nuevoProducto = {
     id: Date.now(),
     codigo: codigo || '',
     nombre: nombre || '',
+    familia: familia || 'General',
+    proveedor: proveedor || 'Sin Asignar',
     ubicacion: ubicacion || 'Sin Asignar',
     stock_actual: Number(stock_actual) || 0,
     stock_minimo: Number(stock_minimo) || 0,
@@ -38,16 +39,18 @@ app.post('/api/inventario', (req, res) => {
   res.status(201).json(nuevoProducto);
 });
 
-// 3. PUT: Editar / Reajustar un producto existente
+// 3. PUT: Editar producto
 app.put('/api/inventario/:id', (req, res) => {
   const { id } = req.params;
-  const { codigo, nombre, ubicacion, stock_actual, stock_minimo, precio_costo } = req.body;
+  const { codigo, nombre, familia, proveedor, ubicacion, stock_actual, stock_minimo, precio_costo } = req.body;
 
   const productoActualizado = db.get('inventario')
     .find({ id: Number(id) })
     .assign({
       codigo,
       nombre,
+      familia: familia || 'General',
+      proveedor: proveedor || 'Sin Asignar',
       ubicacion,
       stock_actual: Number(stock_actual),
       stock_minimo: Number(stock_minimo),
@@ -58,7 +61,7 @@ app.put('/api/inventario/:id', (req, res) => {
   res.json(productoActualizado);
 });
 
-// 4. PATCH: Registrar movimientos de Entrada (+) o Salida (-)
+// 4. PATCH: Movimientos de stock
 app.patch('/api/inventario/:id/movimiento', (req, res) => {
   const { id } = req.params;
   const { tipo, cantidad } = req.body;
@@ -86,14 +89,13 @@ app.patch('/api/inventario/:id/movimiento', (req, res) => {
   res.json({ mensaje: 'Stock actualizado con éxito', nuevoStock });
 });
 
-// 5. DELETE: Eliminar un producto por ID
+// 5. DELETE: Eliminar producto
 app.delete('/api/inventario/:id', (req, res) => {
   const { id } = req.params;
   db.get('inventario').remove({ id: Number(id) }).write();
-  res.json({ mensaje: 'Producto eliminado correctamente' });
+  res.json({ mensaje: 'Producto eliminado' });
 });
 
-// Arrancar el servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor de inventario corriendo en el puerto ${PORT}`);
