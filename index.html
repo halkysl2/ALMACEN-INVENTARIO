@@ -22,6 +22,9 @@
       </div>
     </div>
 
+    <!-- Indicador de estado de conexión -->
+    <div id="bannerEstado" class="hidden mb-4 p-3 rounded text-sm text-center font-medium"></div>
+
     <!-- Tarjetas de Resumen -->
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
       <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
@@ -49,9 +52,9 @@
         <input type="text" id="codigo" placeholder="Código *" required class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
         <input type="text" id="nombre" placeholder="Nombre *" required class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
         
-        <!-- Desplegable de Familias creadas previa creación -->
+        <!-- Desplegable de Familias -->
         <select id="familia" required class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-          <option value="">Seleccionar Familia *</option>
+          <option value="">Cargando familias...</option>
         </select>
 
         <input type="text" id="proveedor" placeholder="Proveedor" class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
@@ -71,7 +74,7 @@
     <!-- Barra de Búsqueda y Filtros -->
     <div class="bg-white p-4 rounded-lg shadow mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
       <div class="w-full md:w-1/3">
-        <input type="text" id="inputBuscar" oninput="filtrarProductos()" placeholder="🔍 Buscar código, nombre, ubicación o proveedor..." class="w-full border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        <input type="text" id="inputBuscar" oninput="filtrarProductos()" placeholder="🔍 Buscar código, nombre, ubicación..." class="w-full border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
       </div>
       <div class="w-full md:w-1/3 flex gap-2">
         <select id="selectFamiliaFiltro" onchange="filtrarProductos()" class="w-full border p-2 rounded text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500">
@@ -103,7 +106,7 @@
         </thead>
         <tbody id="tablaInventario" class="divide-y divide-gray-200 text-sm">
           <tr>
-            <td colspan="10" class="p-4 text-center text-gray-500">Cargando inventario...</td>
+            <td colspan="10" class="p-4 text-center text-gray-500 animate-pulse">Conectando con el servidor en Render...</td>
           </tr>
         </tbody>
       </table>
@@ -199,8 +202,8 @@
   </div>
 
   <script>
-    // CAMBIA ESTA URL POR TU DOMINIO REAL DE RENDER O LOCAL
-    const API_URL = 'https://almacen-inventario-9bd3.onrender.com/api/inventario';
+    // URL configurada con tu servidor en Render
+    const API_URL = 'https://almacen-inventario-9bd3.onrender.com/api';
 
     let listaProductos = [];
     let listaFamilias = [];
@@ -210,22 +213,52 @@
       return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(valor);
     }
 
+    // Petición con soporte para reintentos (útil para cuando Render está despertando)
+    async function fetchConReintento(url, opciones = {}, reintentos = 3) {
+      for (let i = 0; i < reintentos; i++) {
+        try {
+          const res = await fetch(url, opciones);
+          if (res.ok) return res;
+        } catch (e) {
+          if (i === reintentos - 1) throw e;
+          await new Promise(r => setTimeout(r, 3000)); // Esperar 3 segundos antes de reintentar
+        }
+      }
+      throw new Error('Error tras múltiples reintentos');
+    }
+
     // Inicializar Datos
     async function inicializar() {
-      await cargarFamilias();
-      await cargarProductos();
+      mostrarBanner('Servidor conectando...', 'bg-yellow-100 text-yellow-800');
+      try {
+        await cargarFamilias();
+        await cargarProductos();
+        ocultarBanner();
+      } catch (err) {
+        mostrarBanner('Error de conexión con el servidor. Reintentando...', 'bg-red-100 text-red-800');
+        setTimeout(inicializar, 5000);
+      }
+    }
+
+    function mostrarBanner(texto, clase) {
+      const b = document.getElementById('bannerEstado');
+      b.className = `mb-4 p-3 rounded text-sm text-center font-medium ${clase}`;
+      b.innerText = texto;
+      b.classList.remove('hidden');
+    }
+
+    function ocultarBanner() {
+      document.getElementById('bannerEstado').classList.add('hidden');
     }
 
     // --- FAMILIAS ---
     async function cargarFamilias() {
       try {
-        const res = await fetch(`${API_URL}/familias`);
-        if (res.ok) {
-          listaFamilias = await res.json();
-          renderizarDesplegablesFamilias();
-          renderizarListaFamiliasCrud();
-          document.getElementById('statFamilias').innerText = listaFamilias.length;
-        }
+        const res = await fetchConReintento(`${API_URL}/familias`);
+        listaFamilias = await res.json();
+        renderizarDesplegablesFamilias();
+        renderizarListaFamiliasCrud();
+        document.getElementById('statFamilias').innerText = listaFamilias.length;
       } catch (err) {
         console.error("Error al cargar familias:", err);
       }
@@ -326,9 +359,7 @@
     // --- PRODUCTOS ---
     async function cargarProductos() {
       try {
-        const respuesta = await fetch(`${API_URL}/inventario`);
-        if (!respuesta.ok) throw new Error('Error al conectar');
-
+        const respuesta = await fetchConReintento(`${API_URL}/inventario`);
         listaProductos = await respuesta.json();
         actualizarEstadisticas();
         renderizarTabla();
@@ -337,7 +368,7 @@
         document.getElementById('tablaInventario').innerHTML = `
           <tr>
             <td colspan="10" class="p-4 text-center text-red-600 font-semibold">
-              Error al conectar con el servidor.
+              Error al conectar con el servidor. Reintentando...
             </td>
           </tr>`;
       }
@@ -437,7 +468,7 @@
 
       const nuevaFamiliaSelect = document.getElementById('familia').value;
       if (!nuevaFamiliaSelect) {
-        alert('Por favor, crea y selecciona una familia primero.');
+        alert('Por favor, selecciona una familia.');
         return;
       }
 
@@ -585,7 +616,7 @@
       document.body.removeChild(link);
     }
 
-    // Arrancar
+    // Arrancar aplicación
     inicializar();
   </script>
 </body>
