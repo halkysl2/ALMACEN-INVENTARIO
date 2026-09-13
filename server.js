@@ -7,19 +7,56 @@ const app = express();
 const adapter = new FileSync('inventario.json');
 const db = low(adapter);
 
-// Configurar DB
-db.defaults({ inventario: [] }).write();
+// Configurar base de datos inicial con familias por defecto si no existen
+db.defaults({ 
+  inventario: [],
+  familias: [
+    { id: 1, nombre: 'General' },
+    { id: 2, nombre: 'Herramientas' },
+    { id: 3, nombre: 'Materiales' }
+  ] 
+}).write();
 
 app.use(cors());
 app.use(express.json());
 
-// 1. GET: Obtener todos los productos
+// --- ENDPOINTS FAMILIAS ---
+
+// Obtener Familias
+app.get('/api/familias', (req, res) => {
+  const familias = db.get('familias').value();
+  res.json(familias);
+});
+
+// Crear Familia
+app.post('/api/familias', (req, res) => {
+  const { nombre } = req.body;
+  if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+
+  const existe = db.get('familias').find({ nombre: nombre.trim() }).value();
+  if (existe) return res.status(400).json({ error: 'La familia ya existe' });
+
+  const nuevaFamilia = { id: Date.now(), nombre: nombre.trim() };
+  db.get('familias').push(nuevaFamilia).write();
+  res.status(201).json(nuevaFamilia);
+});
+
+// Borrar Familia
+app.delete('/api/familias/:id', (req, res) => {
+  const { id } = req.params;
+  db.get('familias').remove({ id: Number(id) }).write();
+  res.json({ mensaje: 'Familia eliminada' });
+});
+
+// --- ENDPOINTS INVENTARIO ---
+
+// Obtener Productos
 app.get('/api/inventario', (req, res) => {
   const productos = db.get('inventario').value();
   res.json(productos);
 });
 
-// 2. POST: Crear un nuevo producto
+// Crear Producto
 app.post('/api/inventario', (req, res) => {
   const { codigo, nombre, familia, proveedor, ubicacion, stock_actual, stock_minimo, precio_costo } = req.body;
   
@@ -39,7 +76,7 @@ app.post('/api/inventario', (req, res) => {
   res.status(201).json(nuevoProducto);
 });
 
-// 3. PUT: Editar producto
+// Editar Producto
 app.put('/api/inventario/:id', (req, res) => {
   const { id } = req.params;
   const { codigo, nombre, familia, proveedor, ubicacion, stock_actual, stock_minimo, precio_costo } = req.body;
@@ -49,7 +86,7 @@ app.put('/api/inventario/:id', (req, res) => {
     .assign({
       codigo,
       nombre,
-      familia: familia || 'General',
+      familia,
       proveedor: proveedor || 'Sin Asignar',
       ubicacion,
       stock_actual: Number(stock_actual),
@@ -61,35 +98,29 @@ app.put('/api/inventario/:id', (req, res) => {
   res.json(productoActualizado);
 });
 
-// 4. PATCH: Movimientos de stock
+// Movimiento de Stock (+ / -)
 app.patch('/api/inventario/:id/movimiento', (req, res) => {
   const { id } = req.params;
   const { tipo, cantidad } = req.body;
 
   const producto = db.get('inventario').find({ id: Number(id) }).value();
-
-  if (!producto) {
-    return res.status(404).json({ error: 'Producto no encontrado' });
-  }
+  if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
 
   let nuevoStock = Number(producto.stock_actual || 0);
   const cant = Number(cantidad) || 0;
 
-  if (tipo === 'ENTRADA') {
-    nuevoStock += cant;
-  } else if (tipo === 'SALIDA') {
-    nuevoStock = Math.max(0, nuevoStock - cant);
-  }
+  if (tipo === 'ENTRADA') nuevoStock += cant;
+  else if (tipo === 'SALIDA') nuevoStock = Math.max(0, nuevoStock - cant);
 
   db.get('inventario')
     .find({ id: Number(id) })
     .assign({ stock_actual: nuevoStock })
     .write();
 
-  res.json({ mensaje: 'Stock actualizado con éxito', nuevoStock });
+  res.json({ mensaje: 'Stock actualizado', nuevoStock });
 });
 
-// 5. DELETE: Eliminar producto
+// Eliminar Producto
 app.delete('/api/inventario/:id', (req, res) => {
   const { id } = req.params;
   db.get('inventario').remove({ id: Number(id) }).write();
