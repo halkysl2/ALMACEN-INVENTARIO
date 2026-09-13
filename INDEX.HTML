@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Almacén</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f6f9; }
+    h1 { color: #333; }
+    form { background: #fff; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: flex; gap: 10px; }
+    input, button { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    button { background: #28a745; color: white; border: none; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; background: #fff; }
+    th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+    th { background: #007bff; color: white; }
+  </style>
+</head>
+<body>
+
+  <h1>Control de Inventario - Almacén Web</h1>
+
+  <form id="prodForm">
+    <input type="text" id="nombre" placeholder="Nombre Producto" required>
+    <input type="text" id="sku" placeholder="SKU / Código" required>
+    <input type="number" id="cantidad" placeholder="Cantidad" required>
+    <input type="number" step="0.01" id="precio" placeholder="Precio ($)" required>
+    <button type="submit">Guardar Producto</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>SKU</th>
+        <th>Nombre</th>
+        <th>Stock</th>
+        <th>Precio</th>
+      </tr>
+    </thead>
+    <tbody id="tablaCuerpo"></tbody>
+  </table>
+
+  <script>
+    // Reemplaza esta URL con la dirección de tu servidor desplegado en la nube
+    const API_URL = 'http://localhost:3000/api/productos';
+
+    async function cargarProductos() {
+      const res = await fetch(API_URL);
+      const productos = await res.json();
+      const tabla = document.getElementById('tablaCuerpo');
+      tabla.innerHTML = '';
+      productos.forEach(p => {
+        tabla.innerHTML += `
+          <tr>
+            <td>${p.id}</td>
+            <td>${p.sku}</td>
+            <td>${p.nombre}</td>
+            <td>${p.cantidad}</td>
+            <td>$${p.precio.toFixed(2)}</td>
+          </tr>
+        `;
+      });
+    }
+
+    document.getElementById('prodForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const producto = {
+        nombre: document.getElementById('nombre').value,
+        sku: document.getElementById('sku').value,
+        cantidad: parseInt(document.getElementById('cantidad').value),
+        precio: parseFloat(document.getElementById('precio').value)
+      };
+
+      await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(producto)
+      });
+
+      e.target.reset();
+      cargarProductos();
+    });
+
+    cargarProductos();
+  </script>
+</body>
+</html>
