@@ -88,7 +88,7 @@
 
   </div>
 
-  <!-- Modal / Ventana Flotante para Editar Producto -->
+  <!-- Modal Flotante para Editar Producto -->
   <div id="modalEditar" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
     <div class="bg-white rounded-lg p-6 max-w-lg w-full shadow-2xl">
       <div class="flex justify-between items-center mb-4 border-b pb-2">
@@ -135,13 +135,13 @@
   </div>
 
   <script>
-    // SUSTITUYE ESTA URL POR LA TUYA DE RENDER
+    // SUSTITUYE ESTA URL POR LA TUYA REAL DE RENDER
     const API_URL = 'https://tu-proyecto.onrender.com/api/inventario';
 
     let listaProductos = [];
     let filtroActual = 'TODOS';
 
-    // Cargar productos desde el backend
+    // Obtener productos
     async function cargarProductos() {
       try {
         const respuesta = await fetch(API_URL);
@@ -161,7 +161,7 @@
       }
     }
 
-    // Renderizar la tabla con filtros aplicados
+    // Dibujar la tabla
     function renderizarTabla() {
       const tbody = document.getElementById('tablaInventario');
       tbody.innerHTML = '';
@@ -222,7 +222,7 @@
       });
     }
 
-    // Actualizar tarjetas estadísticas
+    // Métricas en la parte superior
     function actualizarEstadisticas() {
       const total = listaProductos.length;
       let bajo = 0;
@@ -246,7 +246,7 @@
     function filtrarProductos() { renderizarTabla(); }
     function filtrarEstado(estado) { filtroActual = estado; renderizarTabla(); }
 
-    // Guardar nuevo producto
+    // Guardar nuevo
     document.getElementById('formProducto').addEventListener('submit', async (e) => {
       e.preventDefault();
 
@@ -277,7 +277,7 @@
       }
     });
 
-    // Abrir Modal con datos del producto
+    // Control de Modal
     function abrirModalEditar(id) {
       const prod = listaProductos.find(p => p.id === id);
       if (!prod) return;
@@ -297,7 +297,7 @@
       document.getElementById('modalEditar').classList.add('hidden');
     }
 
-    // Enviar cambios editados (PUT)
+    // Enviar Edición
     document.getElementById('formEditar').addEventListener('submit', async (e) => {
       e.preventDefault();
       const id = document.getElementById('edit_id').value;
@@ -329,7 +329,7 @@
       }
     });
 
-    // Registrar Entrada / Salida
+    // Entradas y Salidas rápida
     async function registrarMovimiento(id, tipo) {
       const cantidadStr = prompt(`Cantidad para ${tipo}:`, '1');
       if (!cantidadStr) return;
@@ -355,7 +355,7 @@
 
     // Eliminar producto
     async function eliminarProducto(id) {
-      if (!confirm('¿Estás seguro de que deseas eliminar este producto?')) return;
+      if (!confirm('¿Estás seguro de que deseas eliminar este producto del inventario?')) return;
 
       try {
         const respuesta = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
@@ -369,7 +369,7 @@
       }
     }
 
-    // Exportar a CSV
+    // Exportar CSV
     function exportarCSV() {
       if (listaProductos.length === 0) {
         alert('No hay datos para exportar.');
@@ -395,8 +395,13 @@
       document.body.removeChild(link);
     }
 
-    // Carga inicial
+    // Inicializar
     cargarProductos();
   </script>
 </body>
 </html>
+Para desplegar la actualización:
+
+Confirmar despliegue en GitHub/Render
+
+Añadir historial de movimientos
