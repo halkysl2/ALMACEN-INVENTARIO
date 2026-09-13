@@ -1,64 +1,68 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
 const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middlewares
 app.use(cors());
 app.use(express.json());
 
-// Conexión a Base de Datos SQLite
-const db = new sqlite3.Database('./almacen.db', (err) => {
-  if (err) console.error('Error al conectar a SQLite:', err.message);
-  else console.log('Conectado a la base de datos del almacén.');
-});
+// Crear o abrir la base de datos
+const db = new Database('inventario.db');
 
-// Crear tabla de productos si no existe
-db.run(`
-  CREATE TABLE IF NOT EXISTS productos (
+// Crear tabla si no existe
+db.exec(`
+  CREATE TABLE IF NOT EXISTS inventario (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    codigo TEXT UNIQUE NOT NULL,
     nombre TEXT NOT NULL,
-    sku TEXT UNIQUE NOT NULL,
-    cantidad INTEGER NOT NULL DEFAULT 0,
-    precio REAL NOT NULL DEFAULT 0.0
+    ubicacion TEXT NOT NULL DEFAULT 'Sin Asignar',
+    stock_actual INTEGER NOT NULL DEFAULT 0,
+    stock_minimo INTEGER NOT NULL DEFAULT 5,
+    precio_costo REAL DEFAULT 0.0
   )
 `);
 
-// RUTAS API
-
-// 1. Obtener todos los productos
-app.get('/api/productos', (req, res) => {
-  db.all('SELECT * FROM productos', [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
+// GET: Obtener todo el inventario
+app.get('/api/inventario', (req, res) => {
+  try {
+    const stmt = db.prepare('SELECT * FROM inventario ORDER BY nombre ASC');
+    const rows = stmt.all();
     res.json(rows);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// 2. Agregar un nuevo producto
-app.post('/api/productos', (req, res) => {
-  const { nombre, sku, cantidad, precio } = req.body;
-  const sql = 'INSERT INTO productos (nombre, sku, cantidad, precio) VALUES (?, ?, ?, ?)';
-  
-  db.run(sql, [nombre, sku, cantidad, precio], function (err) {
-    if (err) return res.status(400).json({ error: err.message });
-    res.json({ id: this.lastID, nombre, sku, cantidad, precio });
-  });
+// POST: Registrar nuevo producto
+app.post('/api/inventario', (req, res) => {
+  const { codigo, nombre, ubicacion, stock_actual, stock_minimo, precio_costo } = req.body;
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO inventario (codigo, nombre, ubicacion, stock_actual, stock_minimo, precio_costo) 
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    const info = stmt.run(codigo, nombre, ubicacion, stock_actual, stock_minimo, precio_costo);
+    res.json({ id: info.lastInsertRowid, mensaje: 'Producto registrado' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
-// 3. Actualizar stock de un producto
-app.patch('/api/productos/:id', (req, res) => {
-  const { cantidad } = req.body;
+// PATCH: Entrada (+) o Salida (-) de Stock
+app.patch('/api/inventario/:id/movimiento', (req, res) => {
+  const { tipo, cantidad } = req.body;
   const { id } = req.params;
-  
-  db.run('UPDATE productos SET cantidad = ? WHERE id = ?', [cantidad, id], function (err) {
-    if (err) return res.status(400).json({ error: err.message });
-    res.json({ updated: this.changes });
-  });
+  const operador = tipo === 'ENTRADA' ? '+' : '-';
+
+  try {
+    const stmt = db.prepare(`UPDATE inventario SET stock_actual = stock_actual ${operador} ? WHERE id = ?`);
+    stmt.run(cantidad, id);
+    res.json({ mensaje: 'Stock actualizado con éxito' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
-// Iniciar servidor
-app.listen(PORT, () => {
-  console.log(`Servidor de almacén ejecutándose en el puerto ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Servidor de inventario listo en puerto ${PORT}`));
