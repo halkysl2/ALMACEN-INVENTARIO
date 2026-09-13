@@ -3,84 +3,177 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestión de Almacén</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f6f9; }
-    h1 { color: #333; }
-    form { background: #fff; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: flex; gap: 10px; }
-    input, button { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-    button { background: #28a745; color: white; border: none; cursor: pointer; }
-    table { width: 100%; border-collapse: collapse; background: #fff; }
-    th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
-    th { background: #007bff; color: white; }
-  </style>
+  <title>Control de Inventario</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6 text-gray-800">Sistema de Control de Inventario</h1>
 
-  <h1>Control de Inventario - Almacén Web</h1>
+    <!-- Formulario para agregar productos -->
+    <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+      <h2 class="text-xl font-semibold mb-4 text-gray-700">Registrar Nuevo Producto</h2>
+      <form id="formProducto" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <input type="text" id="codigo" placeholder="Código *" required class="border p-2 rounded w-full">
+        <input type="text" id="nombre" placeholder="Nombre del producto *" required class="border p-2 rounded w-full">
+        <input type="text" id="ubicacion" placeholder="Ubicación" class="border p-2 rounded w-full">
+        <input type="number" id="stock_actual" placeholder="Stock Actual" value="0" min="0" class="border p-2 rounded w-full">
+        <input type="number" id="stock_minimo" placeholder="Stock Mínimo" value="5" min="0" class="border p-2 rounded w-full">
+        <input type="number" step="0.01" id="precio_costo" placeholder="Precio Costo ($)" value="0.00" min="0" class="border p-2 rounded w-full">
+        
+        <div class="md:col-span-3">
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow transition">
+            Guardar Producto
+          </button>
+        </div>
+      </form>
+    </div>
 
-  <form id="prodForm">
-    <input type="text" id="nombre" placeholder="Nombre Producto" required>
-    <input type="text" id="sku" placeholder="SKU / Código" required>
-    <input type="number" id="cantidad" placeholder="Cantidad" required>
-    <input type="number" step="0.01" id="precio" placeholder="Precio ($)" required>
-    <button type="submit">Guardar Producto</button>
-  </form>
-
-  <table>
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>SKU</th>
-        <th>Nombre</th>
-        <th>Stock</th>
-        <th>Precio</th>
-      </tr>
-    </thead>
-    <tbody id="tablaCuerpo"></tbody>
-  </table>
+    <!-- Tabla de inventario -->
+    <div class="bg-white rounded-lg shadow-md overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-gray-200 text-gray-700 uppercase text-sm">
+            <th class="p-3">Código</th>
+            <th class="p-3">Nombre</th>
+            <th class="p-3">Ubicación</th>
+            <th class="p-3">Stock</th>
+            <th class="p-3">Mínimo</th>
+            <th class="p-3">Precio</th>
+            <th class="p-3 text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tablaInventario" class="divide-y divide-gray-200">
+          <tr>
+            <td colspan="7" class="p-4 text-center text-gray-500">Cargando inventario...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
   <script>
-    // Reemplaza esta URL con la dirección de tu servidor desplegado en la nube
+    // SUSTITUYE ESTA URL POR LA TUYA DE RENDER (Manteniendo el /api/inventario al final)
     const API_URL = 'https://almacen-inventario-9bd3.onrender.com/api/inventario';
 
+    // Obtener y renderizar todos los productos
     async function cargarProductos() {
-      const res = await fetch(API_URL);
-      const productos = await res.json();
-      const tabla = document.getElementById('tablaCuerpo');
-      tabla.innerHTML = '';
-      productos.forEach(p => {
-        tabla.innerHTML += `
+      try {
+        const respuesta = await fetch(API_URL);
+        
+        if (!respuesta.ok) {
+          throw new Error('Error al conectar con la API');
+        }
+
+        const productos = await respuesta.json();
+        const tbody = document.getElementById('tablaInventario');
+        tbody.innerHTML = '';
+
+        if (productos.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-gray-500">No hay productos en el inventario.</td></tr>`;
+          return;
+        }
+
+        productos.forEach(prod => {
+          // Protección contra valores nulos/undefined que causaban el error de toFixed
+          const stockActual = Number(prod.stock_actual || 0);
+          const stockMinimo = Number(prod.stock_minimo || 0);
+          const precioCosto = Number(prod.precio_costo || 0).toFixed(2);
+          const alertaStock = stockActual <= stockMinimo ? 'bg-red-100 text-red-700 font-bold' : '';
+
+          const tr = document.createElement('tr');
+          tr.className = `hover:bg-gray-50 ${alertaStock}`;
+          tr.innerHTML = `
+            <td class="p-3 font-mono text-sm">${prod.codigo || '-'}</td>
+            <td class="p-3 font-semibold">${prod.nombre || '-'}</td>
+            <td class="p-3">${prod.ubicacion || 'Sin Asignar'}</td>
+            <td class="p-3">${stockActual}</td>
+            <td class="p-3">${stockMinimo}</td>
+            <td class="p-3">$${precioCosto}</td>
+            <td class="p-3 text-center space-x-2">
+              <button onclick="registrarMovimiento(${prod.id}, 'ENTRADA')" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm transition">
+                + Entrada
+              </button>
+              <button onclick="registrarMovimiento(${prod.id}, 'SALIDA')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition">
+                - Salida
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('tablaInventario').innerHTML = `
           <tr>
-            <td>${p.id}</td>
-            <td>${p.sku}</td>
-            <td>${p.nombre}</td>
-            <td>${p.cantidad}</td>
-            <td>$${p.precio.toFixed(2)}</td>
-          </tr>
-        `;
-      });
+            <td colspan="7" class="p-4 text-center text-red-600 font-semibold">
+              Error al conectar con el servidor. Verifica que el servidor de Render esté encendido.
+            </td>
+          </tr>`;
+      }
     }
 
-    document.getElementById('prodForm').addEventListener('submit', async (e) => {
+    // Guardar nuevo producto
+    document.getElementById('formProducto').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const producto = {
+
+      const nuevoProducto = {
+        codigo: document.getElementById('codigo').value,
         nombre: document.getElementById('nombre').value,
-        sku: document.getElementById('sku').value,
-        cantidad: parseInt(document.getElementById('cantidad').value),
-        precio: parseFloat(document.getElementById('precio').value)
+        ubicacion: document.getElementById('ubicacion').value || 'Sin Asignar',
+        stock_actual: Number(document.getElementById('stock_actual').value) || 0,
+        stock_minimo: Number(document.getElementById('stock_minimo').value) || 5,
+        precio_costo: Number(document.getElementById('precio_costo').value) || 0
       };
 
-      await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(producto)
-      });
+      try {
+        const respuesta = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(nuevoProducto)
+        });
 
-      e.target.reset();
-      cargarProductos();
+        if (respuesta.ok) {
+          document.getElementById('formProducto').reset();
+          cargarProductos();
+        } else {
+          alert('Error al guardar el producto.');
+        }
+      } catch (error) {
+        console.error('Error al enviar datos:', error);
+        alert('No se pudo guardar el producto. Comprueba la conexión.');
+      }
     });
 
+    // Registrar Entrada (+) o Salida (-)
+    async function registrarMovimiento(id, tipo) {
+      const cantidadStr = prompt(`Cantidad para ${tipo}:`, '1');
+      if (!cantidadStr) return;
+
+      const cantidad = Number(cantidadStr);
+      if (isNaN(cantidad) || cantidad <= 0) {
+        alert('Por favor, ingresa un número válido mayor a 0.');
+        return;
+      }
+
+      try {
+        const respuesta = await fetch(`${API_URL}/${id}/movimiento`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tipo, cantidad })
+        });
+
+        if (respuesta.ok) {
+          cargarProductos();
+        } else {
+          alert('Error al actualizar el stock.');
+        }
+      } catch (error) {
+        console.error('Error en el movimiento:', error);
+        alert('No se pudo actualizar el stock.');
+      }
+    }
+
+    // Cargar los productos al abrir la página
     cargarProductos();
   </script>
 </body>
