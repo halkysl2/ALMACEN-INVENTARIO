@@ -12,9 +12,14 @@
     <!-- Encabezado -->
     <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
       <h1 class="text-3xl font-bold text-gray-800">Panel de Control de Inventario</h1>
-      <button onclick="exportarCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded shadow transition flex items-center gap-2">
-        📊 Exportar a Excel (CSV)
-      </button>
+      <div class="flex gap-2">
+        <button onclick="abrirModalFamilias()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded shadow transition flex items-center gap-2">
+          📁 Gestionar Familias
+        </button>
+        <button onclick="exportarCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded shadow transition flex items-center gap-2">
+          📊 Exportar (CSV)
+        </button>
+      </div>
     </div>
 
     <!-- Tarjetas de Resumen -->
@@ -24,7 +29,7 @@
         <p id="statTotal" class="text-2xl font-bold text-gray-800">0</p>
       </div>
       <div class="bg-white p-4 rounded-lg shadow border-l-4 border-purple-500">
-        <p class="text-sm text-gray-500 uppercase font-semibold">Familias</p>
+        <p class="text-sm text-gray-500 uppercase font-semibold">Familias Registradas</p>
         <p id="statFamilias" class="text-2xl font-bold text-purple-600">0</p>
       </div>
       <div class="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
@@ -43,7 +48,12 @@
       <form id="formProducto" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         <input type="text" id="codigo" placeholder="Código *" required class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
         <input type="text" id="nombre" placeholder="Nombre *" required class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-        <input type="text" id="familia" placeholder="Familia / Categ." class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        
+        <!-- Desplegable de Familias creadas previa creación -->
+        <select id="familia" required class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+          <option value="">Seleccionar Familia *</option>
+        </select>
+
         <input type="text" id="proveedor" placeholder="Proveedor" class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
         <input type="text" id="ubicacion" placeholder="Ubicación" class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
         <input type="number" id="stock_actual" placeholder="Stock Act." value="0" min="0" class="border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
@@ -58,13 +68,13 @@
       </form>
     </div>
 
-    <!-- Barra de Búsqueda y Filtros por Familia y Estado -->
+    <!-- Barra de Búsqueda y Filtros -->
     <div class="bg-white p-4 rounded-lg shadow mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
       <div class="w-full md:w-1/3">
         <input type="text" id="inputBuscar" oninput="filtrarProductos()" placeholder="🔍 Buscar código, nombre, ubicación o proveedor..." class="w-full border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
       </div>
       <div class="w-full md:w-1/3 flex gap-2">
-        <select id="selectFamilia" onchange="filtrarProductos()" class="w-full border p-2 rounded text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500">
+        <select id="selectFamiliaFiltro" onchange="filtrarProductos()" class="w-full border p-2 rounded text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500">
           <option value="TODAS">Todas las familias</option>
         </select>
       </div>
@@ -101,11 +111,42 @@
 
   </div>
 
-  <!-- Modal Flotante para Editar Producto -->
+  <!-- MODAL: GESTIONAR FAMILIAS -->
+  <div id="modalFamilias" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full shadow-2xl">
+      <div class="flex justify-between items-center mb-4 border-b pb-2">
+        <h3 class="text-lg font-bold text-gray-800">Administrar Familias</h3>
+        <button onclick="cerrarModalFamilias()" class="text-gray-500 hover:text-gray-700 font-bold text-xl">&times;</button>
+      </div>
+      
+      <!-- Crear Nueva Familia -->
+      <form id="formNuevaFamilia" class="flex gap-2 mb-4">
+        <input type="text" id="nombreNuevaFamilia" placeholder="Ej: Electrónica, Pinturas..." required class="flex-1 border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-purple-500">
+        <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-4 py-2 rounded text-sm transition">
+          + Crear
+        </button>
+      </form>
+
+      <!-- Lista de familias existentes -->
+      <div class="border rounded max-h-60 overflow-y-auto divide-y">
+        <ul id="listaFamiliasCrud" class="divide-y text-sm text-gray-700">
+          <li class="p-3 text-center text-gray-400">Cargando familias...</li>
+        </ul>
+      </div>
+
+      <div class="mt-4 text-right">
+        <button onclick="cerrarModalFamilias()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold px-4 py-2 rounded text-sm">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EDITAR PRODUCTO -->
   <div id="modalEditar" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
     <div class="bg-white rounded-lg p-6 max-w-lg w-full shadow-2xl">
       <div class="flex justify-between items-center mb-4 border-b pb-2">
-        <h3 class="text-lg font-bold text-gray-800">Editar / Reajustar Producto</h3>
+        <h3 class="text-lg font-bold text-gray-800">Editar Producto</h3>
         <button onclick="cerrarModal()" class="text-gray-500 hover:text-gray-700 font-bold text-xl">&times;</button>
       </div>
       <form id="formEditar" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -120,7 +161,9 @@
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1">Familia</label>
-          <input type="text" id="edit_familia" class="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
+          <select id="edit_familia" required class="w-full border p-2 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">Seleccionar Familia</option>
+          </select>
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1">Proveedor</label>
@@ -156,23 +199,137 @@
   </div>
 
   <script>
-    // SUSTITUYE CON TU URL REAL DE RENDER
-    const API_URL = 'https://almacen-inventario-9bd3.onrender.com/api/inventario';
+    // CAMBIA ESTA URL POR TU DOMINIO REAL DE RENDER O LOCAL
+    const API_URL = 'https://tu-proyecto.onrender.com/api';
 
     let listaProductos = [];
+    let listaFamilias = [];
     let filtroActual = 'TODOS';
 
     function formatearEuro(valor) {
       return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(valor);
     }
 
+    // Inicializar Datos
+    async function inicializar() {
+      await cargarFamilias();
+      await cargarProductos();
+    }
+
+    // --- FAMILIAS ---
+    async function cargarFamilias() {
+      try {
+        const res = await fetch(`${API_URL}/familias`);
+        if (res.ok) {
+          listaFamilias = await res.json();
+          renderizarDesplegablesFamilias();
+          renderizarListaFamiliasCrud();
+          document.getElementById('statFamilias').innerText = listaFamilias.length;
+        }
+      } catch (err) {
+        console.error("Error al cargar familias:", err);
+      }
+    }
+
+    function renderizarDesplegablesFamilias() {
+      const selectForm = document.getElementById('familia');
+      const selectEdit = document.getElementById('edit_familia');
+      const selectFiltro = document.getElementById('selectFamiliaFiltro');
+
+      const valForm = selectForm.value;
+      const valEdit = selectEdit.value;
+      const valFiltro = selectFiltro.value;
+
+      selectForm.innerHTML = '<option value="">Seleccionar Familia *</option>';
+      selectEdit.innerHTML = '<option value="">Seleccionar Familia *</option>';
+      selectFiltro.innerHTML = '<option value="TODAS">Todas las familias</option>';
+
+      listaFamilias.forEach(f => {
+        selectForm.innerHTML += `<option value="${f.nombre}">${f.nombre}</option>`;
+        selectEdit.innerHTML += `<option value="${f.nombre}">${f.nombre}</option>`;
+        selectFiltro.innerHTML += `<option value="${f.nombre}">${f.nombre}</option>`;
+      });
+
+      selectForm.value = valForm;
+      selectEdit.value = valEdit;
+      selectFiltro.value = valFiltro || 'TODAS';
+    }
+
+    function renderizarListaFamiliasCrud() {
+      const ul = document.getElementById('listaFamiliasCrud');
+      ul.innerHTML = '';
+
+      if (listaFamilias.length === 0) {
+        ul.innerHTML = `<li class="p-3 text-center text-gray-400">No hay familias creadas.</li>`;
+        return;
+      }
+
+      listaFamilias.forEach(f => {
+        const li = document.createElement('li');
+        li.className = "flex justify-between items-center p-3 hover:bg-gray-50";
+        li.innerHTML = `
+          <span class="font-semibold text-gray-700">${f.nombre}</span>
+          <button onclick="eliminarFamilia(${f.id})" class="text-red-600 hover:text-red-800 text-xs font-bold bg-red-100 px-2 py-1 rounded">
+            Eliminar
+          </button>
+        `;
+        ul.appendChild(li);
+      });
+    }
+
+    document.getElementById('formNuevaFamilia').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('nombreNuevaFamilia');
+      const nombre = input.value.trim();
+
+      if (!nombre) return;
+
+      try {
+        const res = await fetch(`${API_URL}/familias`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre })
+        });
+
+        if (res.ok) {
+          input.value = '';
+          await cargarFamilias();
+        } else {
+          alert('Error al crear la familia (quizás ya existe).');
+        }
+      } catch (e) {
+        alert('Error de conexión.');
+      }
+    });
+
+    async function eliminarFamilia(id) {
+      if (!confirm('¿Seguro que deseas borrar esta familia?')) return;
+
+      try {
+        const res = await fetch(`${API_URL}/familias/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          await cargarFamilias();
+        }
+      } catch (e) {
+        alert('Error al eliminar familia.');
+      }
+    }
+
+    function abrirModalFamilias() {
+      document.getElementById('modalFamilias').classList.remove('hidden');
+    }
+
+    function cerrarModalFamilias() {
+      document.getElementById('modalFamilias').classList.add('hidden');
+    }
+
+    // --- PRODUCTOS ---
     async function cargarProductos() {
       try {
-        const respuesta = await fetch(API_URL);
+        const respuesta = await fetch(`${API_URL}/inventario`);
         if (!respuesta.ok) throw new Error('Error al conectar');
 
         listaProductos = await respuesta.json();
-        poblacionSelectorFamilias();
         actualizarEstadisticas();
         renderizarTabla();
       } catch (error) {
@@ -186,31 +343,12 @@
       }
     }
 
-    function poblacionSelectorFamilias() {
-      const select = document.getElementById('selectFamilia');
-      const familiaSeleccionada = select.value;
-      
-      const familias = [...new Set(listaProductos.map(p => (p.familia || 'General').trim()))].sort();
-
-      select.innerHTML = '<option value="TODAS">Todas las familias</option>';
-      familias.forEach(fam => {
-        const option = document.createElement('option');
-        option.value = fam;
-        option.textContent = fam;
-        select.appendChild(option);
-      });
-
-      if (familias.includes(familiaSeleccionada)) {
-        select.value = familiaSeleccionada;
-      }
-    }
-
     function renderizarTabla() {
       const tbody = document.getElementById('tablaInventario');
       tbody.innerHTML = '';
 
       const textoBusqueda = document.getElementById('inputBuscar').value.toLowerCase();
-      const familiaFiltro = document.getElementById('selectFamilia').value;
+      const familiaFiltro = document.getElementById('selectFamiliaFiltro').value;
 
       const productosFiltrados = listaProductos.filter(prod => {
         const coincideTexto = (prod.codigo || '').toLowerCase().includes(textoBusqueda) ||
@@ -219,8 +357,7 @@
                               (prod.proveedor || '').toLowerCase().includes(textoBusqueda) ||
                               (prod.familia || '').toLowerCase().includes(textoBusqueda);
 
-        const famProducto = (prod.familia || 'General').trim();
-        const coincideFamilia = familiaFiltro === 'TODAS' || famProducto === familiaFiltro;
+        const coincideFamilia = familiaFiltro === 'TODAS' || prod.familia === familiaFiltro;
 
         const stock = Number(prod.stock_actual || 0);
         const min = Number(prod.stock_minimo || 0);
@@ -247,7 +384,7 @@
         tr.innerHTML = `
           <td class="p-3 font-mono text-xs">${prod.codigo || '-'}</td>
           <td class="p-3 font-semibold">${prod.nombre || '-'}</td>
-          <td class="p-3"><span class="bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-full">${prod.familia || 'General'}</span></td>
+          <td class="p-3"><span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full font-semibold">${prod.familia || 'Sin Familia'}</span></td>
           <td class="p-3 text-gray-700">${prod.proveedor || 'Sin Asignar'}</td>
           <td class="p-3">${prod.ubicacion || 'Sin Asignar'}</td>
           <td class="p-3 font-bold">${stockActual}</td>
@@ -278,8 +415,6 @@
       let bajo = 0;
       let valorTotal = 0;
 
-      const conjuntoFamilias = new Set();
-
       listaProductos.forEach(p => {
         const stock = Number(p.stock_actual || 0);
         const min = Number(p.stock_minimo || 0);
@@ -287,14 +422,9 @@
 
         if (stock <= min) bajo++;
         valorTotal += stock * precio;
-
-        if (p.familia && p.familia.trim() !== '') {
-          conjuntoFamilias.add(p.familia.trim().toLowerCase());
-        }
       });
 
       document.getElementById('statTotal').innerText = total;
-      document.getElementById('statFamilias').innerText = conjuntoFamilias.size;
       document.getElementById('statBajo').innerText = bajo;
       document.getElementById('statValor').innerText = formatearEuro(valorTotal);
     }
@@ -305,10 +435,16 @@
     document.getElementById('formProducto').addEventListener('submit', async (e) => {
       e.preventDefault();
 
+      const nuevaFamiliaSelect = document.getElementById('familia').value;
+      if (!nuevaFamiliaSelect) {
+        alert('Por favor, crea y selecciona una familia primero.');
+        return;
+      }
+
       const nuevoProducto = {
         codigo: document.getElementById('codigo').value,
         nombre: document.getElementById('nombre').value,
-        familia: document.getElementById('familia').value || 'General',
+        familia: nuevaFamiliaSelect,
         proveedor: document.getElementById('proveedor').value || 'Sin Asignar',
         ubicacion: document.getElementById('ubicacion').value || 'Sin Asignar',
         stock_actual: Number(document.getElementById('stock_actual').value) || 0,
@@ -317,7 +453,7 @@
       };
 
       try {
-        const respuesta = await fetch(API_URL, {
+        const respuesta = await fetch(`${API_URL}/inventario`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(nuevoProducto)
@@ -341,7 +477,7 @@
       document.getElementById('edit_id').value = prod.id;
       document.getElementById('edit_codigo').value = prod.codigo || '';
       document.getElementById('edit_nombre').value = prod.nombre || '';
-      document.getElementById('edit_familia').value = prod.familia || 'General';
+      document.getElementById('edit_familia').value = prod.familia || '';
       document.getElementById('edit_proveedor').value = prod.proveedor || '';
       document.getElementById('edit_ubicacion').value = prod.ubicacion || '';
       document.getElementById('edit_stock_actual').value = prod.stock_actual || 0;
@@ -362,7 +498,7 @@
       const productoEditado = {
         codigo: document.getElementById('edit_codigo').value,
         nombre: document.getElementById('edit_nombre').value,
-        familia: document.getElementById('edit_familia').value || 'General',
+        familia: document.getElementById('edit_familia').value,
         proveedor: document.getElementById('edit_proveedor').value || 'Sin Asignar',
         ubicacion: document.getElementById('edit_ubicacion').value || 'Sin Asignar',
         stock_actual: Number(document.getElementById('edit_stock_actual').value),
@@ -371,7 +507,7 @@
       };
 
       try {
-        const respuesta = await fetch(`${API_URL}/${id}`, {
+        const respuesta = await fetch(`${API_URL}/inventario/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(productoEditado)
@@ -399,7 +535,7 @@
       }
 
       try {
-        const respuesta = await fetch(`${API_URL}/${id}/movimiento`, {
+        const respuesta = await fetch(`${API_URL}/inventario/${id}/movimiento`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tipo, cantidad })
@@ -407,22 +543,20 @@
 
         if (respuesta.ok) cargarProductos();
       } catch (error) {
-        alert('Error al registrar el movimiento.');
+        alert('Error al registrar movimiento.');
       }
     }
 
     async function eliminarProducto(id) {
-      if (!confirm('¿Estás seguro de que deseas eliminar este producto?')) return;
+      if (!confirm('¿Estás seguro de eliminar este producto?')) return;
 
       try {
-        const respuesta = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+        const respuesta = await fetch(`${API_URL}/inventario/${id}`, { method: 'DELETE' });
         if (respuesta.ok) {
           cargarProductos();
-        } else {
-          alert('No se pudo eliminar el producto.');
         }
       } catch (error) {
-        alert('Error al eliminar el producto.');
+        alert('Error al eliminar.');
       }
     }
 
@@ -439,7 +573,7 @@
         const stock = Number(p.stock_actual || 0);
         const precio = Number(p.precio_costo || 0);
         const total = (stock * precio).toFixed(2);
-        csvContent += `"${p.codigo}","${p.nombre}","${p.familia || 'General'}","${p.proveedor || 'Sin Asignar'}","${p.ubicacion}",${stock},${p.stock_minimo},${precio},${total}\n`;
+        csvContent += `"${p.codigo}","${p.nombre}","${p.familia || ''}","${p.proveedor || 'Sin Asignar'}","${p.ubicacion}",${stock},${p.stock_minimo},${precio},${total}\n`;
       });
 
       const encodedUri = encodeURI(csvContent);
@@ -451,7 +585,8 @@
       document.body.removeChild(link);
     }
 
-    cargarProductos();
+    // Arrancar
+    inicializar();
   </script>
 </body>
 </html>
